@@ -1,0 +1,3 @@
+name: sparkpost-consumer
+runtime: nodejs
+description: Creates a webhook consumer for SparkPost events

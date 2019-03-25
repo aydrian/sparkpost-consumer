@@ -1,0 +1,10 @@
+{
+    "name": "typescript",
+    "devDependencies": {
+        "@types/node": "^11.11.7"
+    },
+    "dependencies": {
+        "@pulumi/pulumi": "latest",
+        "sparkpost": "^2.1.3"
+    }
+}
