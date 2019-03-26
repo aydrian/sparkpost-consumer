@@ -1,5 +1,5 @@
 //import * as SparkPostApi from 'sparkpost'
-const SparkPost = require('sparkpost')
+import * as SparkPost from 'sparkpost'
 import * as pulumi from '@pulumi/pulumi'
 import * as dynamic from '@pulumi/pulumi/dynamic'
 
@@ -40,8 +40,6 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
       target: inputs['url'],
       events: inputs['events']
     })
-
-    console.log(res)
 
     return {
       id: `${res.results.id}`
