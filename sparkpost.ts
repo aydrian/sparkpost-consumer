@@ -26,9 +26,7 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
   }
 
   diff = (id: pulumi.ID, olds: any, news: any) => {
-    const replaces: string[] = []
-
-    return Promise.resolve({ replaces })
+    return Promise.resolve({})
   }
 
   create = async (inputs: any) => {
