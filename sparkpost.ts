@@ -1,4 +1,3 @@
-//import * as SparkPostApi from 'sparkpost'
 import * as SparkPost from 'sparkpost'
 import * as pulumi from '@pulumi/pulumi'
 import * as dynamic from '@pulumi/pulumi/dynamic'
