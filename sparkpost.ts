@@ -46,7 +46,7 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
   update = async (id: string, olds: any, news: any) => {
     const client = new SparkPost(spApiKey)
 
-    const res = await client.webhooks.update(id, {
+    let res = await client.webhooks.update(id, {
       target: news['url'],
       events: news['events']
     })
@@ -62,6 +62,7 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
 }
 
 interface SparkPostWebhookResourceArgs {
+  //name: pulumi.Input<string>
   url: pulumi.Input<string>
   events: pulumi.Input<Array<string>>
 }

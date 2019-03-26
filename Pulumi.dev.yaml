@@ -1,3 +1,5 @@
 config:
+  aws:region: us-east-1
+  cloud:provider: aws
   sparkpost:api-key:
     secure: AAABAIVcy+UeIe+nBS+KOaAhAFn4E4D4A6P7UTUVOx0JobaGYll0VuoU74/JCmRKls0KFVkb6e70mymt+pN2PDcUcBQhMBC8
