@@ -1,11 +1,13 @@
-import * as pulumi from '@pulumi/pulumi'
 import * as cloud from '@pulumi/cloud'
 import { SparkPostWebhookResource } from './sparkpost'
 
+// Create a table `events` with `event_id` as primary key
 let events = new cloud.Table('sparkpost-events', 'event_id')
 
+// Create an internet-facing HTTP API
 const webhookHandler = new cloud.API('sparkpost-webhook-handler')
 
+// GET /  returns a simple message
 webhookHandler.get('/', async (_, res) => {
   res
     .status(200)
@@ -14,6 +16,7 @@ webhookHandler.get('/', async (_, res) => {
     )
 })
 
+// GET /events lists all events in the table
 webhookHandler.get('/events', async (_, res) => {
   try {
     const items = await events.scan()
@@ -24,34 +27,34 @@ webhookHandler.get('/events', async (_, res) => {
   }
 })
 
+// POST / inserts webhook events to the table
 webhookHandler.post('/', async (req, res) => {
-  console.log(`Batch ID ${req.headers['x-messagesystems-batch-id']}`)
+  const strBatchId = `Batch ID: ${req.headers['x-messagesystems-batch-id']}`
+  console.log(`${strBatchId} ACK`)
   const payload = JSON.parse(req.body.toString())
-  payload.forEach(
-    async (event: { msys: { message_event: any; track_event: any } }) => {
-      const { message_event, track_event } = event.msys
-      try {
-        if (message_event) {
-          console.log(`Inserting message_event ${message_event.type}`)
-          await events.insert(message_event)
-        }
-        if (track_event) {
-          console.log(`Inserting track_event ${track_event.type}`)
-          await events.insert(track_event)
-        }
-      } catch (err) {
-        console.log(`Insert error: ${JSON.stringify(err.stack)}`)
+  for (let event of payload) {
+    const { message_event, track_event } = event.msys
+    try {
+      if (message_event) {
+        console.log(`${strBatchId} INSERT message_event: ${message_event.type}`)
+        await events.insert(message_event)
       }
+      if (track_event) {
+        console.log(`${strBatchId} INSERT track_event: ${track_event.type}`)
+        await events.insert(track_event)
+      }
+    } catch (err) {
+      console.log(`${strBatchId} INSERT error: ${JSON.stringify(err.stack)}`)
     }
-  )
+  }
   res.status(200).end()
 })
 
 export const url = webhookHandler.publish().url
 
+// Creates the SparkPost Webhook
 const webhook = new SparkPostWebhookResource('sparkpost-webhook', {
+  name: 'Pulumi Event Webhook',
   url,
-  events: ['delivery', 'initial_open']
+  events: ['delivery', 'initial_open', 'click']
 })
-
-export const id = webhook.id

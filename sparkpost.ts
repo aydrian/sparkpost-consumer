@@ -32,37 +32,49 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
   create = async (inputs: any) => {
     const client = new SparkPost(spApiKey)
 
-    const res = await client.webhooks.create({
-      name: 'Pulumi created Webhook',
-      target: inputs['url'],
-      events: inputs['events']
-    })
+    try {
+      const res = await client.webhooks.create({
+        name: inputs['name'],
+        target: inputs['url'],
+        events: inputs['events']
+      })
 
-    return {
-      id: `${res.results.id}`
+      return {
+        id: `${res.results.id}`
+      }
+    } catch (err) {
+      throw new Error(`SparkPost Error: ${JSON.stringify(err.errors)}`)
     }
   }
 
   update = async (id: string, olds: any, news: any) => {
     const client = new SparkPost(spApiKey)
 
-    let res = await client.webhooks.update(id, {
-      target: news['url'],
-      events: news['events']
-    })
+    try {
+      let res = await client.webhooks.update(id, {
+        target: news['url'],
+        events: news['events']
+      })
 
-    return { outs: { id: res.results.id } }
+      return { outs: { id: res.results.id } }
+    } catch (err) {
+      throw new Error(`SparkPost Error: ${JSON.stringify(err.errors)}`)
+    }
   }
 
   delete = async (id: pulumi.ID, props: any) => {
     const client = new SparkPost(spApiKey)
 
-    const res = await client.webhooks.delete(id)
+    try {
+      await client.webhooks.delete(id)
+    } catch (err) {
+      throw new Error(`SparkPost Error: ${JSON.stringify(err.errors)}`)
+    }
   }
 }
 
 interface SparkPostWebhookResourceArgs {
-  //name: pulumi.Input<string>
+  name: pulumi.Input<string>
   url: pulumi.Input<string>
   events: pulumi.Input<Array<string>>
 }
