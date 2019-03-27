@@ -55,6 +55,6 @@ export const url = webhookHandler.publish().url
 // Creates the SparkPost Webhook
 const webhook = new SparkPostWebhookResource('sparkpost-webhook', {
   name: 'Pulumi Event Webhook',
-  url,
+  target: url,
   events: ['delivery', 'initial_open', 'click']
 })

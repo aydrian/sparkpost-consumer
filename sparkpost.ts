@@ -8,10 +8,17 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
   check = (olds: any, news: any) => {
     const failedChecks: dynamic.CheckFailure[] = []
 
-    if (news['url'] === undefined) {
+    if (news['name'] === undefined) {
       failedChecks.push({
-        property: 'url',
-        reason: "required property 'url' missing"
+        property: 'name',
+        reason: "required property 'name' missing"
+      })
+    }
+
+    if (news['target'] === undefined) {
+      failedChecks.push({
+        property: 'target',
+        reason: "required property 'target' missing"
       })
     }
 
@@ -34,9 +41,20 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
 
     try {
       const res = await client.webhooks.create({
-        name: inputs['name'],
-        target: inputs['url'],
-        events: inputs['events']
+        name: inputs.name,
+        target: inputs.target,
+        events: inputs.events,
+        ...(typeof inputs.active !== undefined && { active: inputs.active }),
+        ...(typeof inputs.customHeaders !== undefined && {
+          custom_headers: inputs.custom_headers
+        }),
+        ...(inputs.authType && { auth_type: inputs.authType }),
+        ...(typeof inputs.authRequestDetails !== undefined && {
+          auth_request_details: inputs.authRequestDetails
+        }),
+        ...(typeof inputs.authCredentials !== undefined && {
+          auth_credentials: inputs.authCredentials
+        })
       })
 
       return {
@@ -52,8 +70,20 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
 
     try {
       let res = await client.webhooks.update(id, {
-        target: news['url'],
-        events: news['events']
+        ...(news.name && { name: news.name }),
+        ...(news.target && { target: news.target }),
+        ...(typeof news.events !== undefined && { events: news.events }),
+        ...(typeof news.active !== undefined && { active: news.active }),
+        ...(typeof news.customHeaders !== undefined && {
+          custom_headers: news.custom_headers
+        }),
+        ...(news.authType && { auth_type: news.authType }),
+        ...(typeof news.authRequestDetails !== undefined && {
+          auth_request_details: news.authRequestDetails
+        }),
+        ...(typeof news.authCredentials !== undefined && {
+          auth_credentials: news.authCredentials
+        })
       })
 
       return { outs: { id: res.results.id } }
@@ -73,10 +103,21 @@ class SparkPostWebhookProvider implements dynamic.ResourceProvider {
   }
 }
 
+enum authTypes {
+  none,
+  basic,
+  oauth2
+}
+
 interface SparkPostWebhookResourceArgs {
   name: pulumi.Input<string>
-  url: pulumi.Input<string>
+  target: pulumi.Input<string>
   events: pulumi.Input<Array<string>>
+  active?: pulumi.Input<boolean>
+  customHeaders?: pulumi.Input<object>
+  authType?: pulumi.Input<authTypes>
+  authRequestDetails?: pulumi.Input<object>
+  authCredentials?: pulumi.Input<object>
 }
 
 export class SparkPostWebhookResource extends dynamic.Resource {
