@@ -1,7 +1,6 @@
 import * as SparkPost from 'sparkpost'
 import * as pulumi from '@pulumi/pulumi'
 import * as dynamic from '@pulumi/pulumi/dynamic'
-import { runInPulumiStack } from '@pulumi/pulumi/runtime'
 
 const spApiKey = new pulumi.Config('sparkpost').require('api-key')
 

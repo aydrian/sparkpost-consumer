@@ -1,56 +1,117 @@
-import * as cloud from '@pulumi/cloud'
+import * as awsx from '@pulumi/awsx'
+import * as aws from '@pulumi/aws'
 import { SparkPostWebhookResource } from './sparkpost'
 
 // Create a table `events` with `event_id` as primary key
-let events = new cloud.Table('sparkpost-events', 'event_id')
+const events = new aws.dynamodb.Table('sparkpost-events', {
+  attributes: [
+    {
+      name: 'event_id',
+      type: 'S'
+    }
+  ],
+  hashKey: 'event_id',
+  billingMode: 'PAY_PER_REQUEST'
+})
 
 // Create an internet-facing HTTP API
-const webhookHandler = new cloud.API('sparkpost-webhook-handler')
-
-// GET /  returns a simple message
-webhookHandler.get('/', async (_, res) => {
-  res
-    .status(200)
-    .end(
-      'SparkPost Webhook Responder 🔥\n☁️ infrastructure made with ❤️ by Pulumi 🍹\n'
-    )
-})
-
-// GET /events lists all events in the table
-webhookHandler.get('/events', async (_, res) => {
-  try {
-    const items = await events.scan()
-    res.status(200).json(items)
-  } catch (err) {
-    res.status(500).json(err.stack)
-    console.log(`GET /events error: ${err.stack}`)
-  }
-})
-
-// POST / inserts webhook events to the table
-webhookHandler.post('/', async (req, res) => {
-  const strBatchId = `Batch ID: ${req.headers['x-messagesystems-batch-id']}`
-  console.log(`${strBatchId} ACK`)
-  const payload = JSON.parse(req.body.toString())
-  for (let event of payload) {
-    const { message_event, track_event } = event.msys
-    try {
-      if (message_event) {
-        console.log(`${strBatchId} INSERT message_event: ${message_event.type}`)
-        await events.insert(message_event)
+const webhookHandler = new awsx.apigateway.API('sparkpost-webhook-handler', {
+  routes: [
+    {
+      // GET /  returns a simple message
+      path: '/',
+      method: 'GET',
+      eventHandler: async event => {
+        return {
+          statusCode: 200,
+          body:
+            'SparkPost Webhook Responder 🔥\n☁️ infrastructure made with ❤️ by Pulumi 🍹\n'
+        }
       }
-      if (track_event) {
-        console.log(`${strBatchId} INSERT track_event: ${track_event.type}`)
-        await events.insert(track_event)
+    },
+    {
+      // GET /events lists all events in the table
+      path: '/events',
+      method: 'GET',
+      eventHandler: async event => {
+        try {
+          const client = new aws.sdk.DynamoDB.DocumentClient()
+          const scanResult = await client
+            .scan({
+              TableName: events.name.get()
+            })
+            .promise()
+          return {
+            statusCode: 200,
+            body: JSON.stringify(scanResult.Items)
+          }
+        } catch (err) {
+          console.log(`GET /events error: ${err.stack}`)
+          return {
+            statusCode: 500,
+            body: err.stack
+          }
+        }
       }
-    } catch (err) {
-      console.log(`${strBatchId} INSERT error: ${JSON.stringify(err.stack)}`)
+    },
+    {
+      // POST / inserts webhook events to the table
+      path: '/',
+      method: 'POST',
+      eventHandler: async event => {
+        const strBatchId = `Batch ID: ${
+          event.headers['X-MessageSystems-Batch-ID']
+        }`
+        console.log(`${strBatchId} ACK`)
+        const body = event.body || '[]'
+        const payload = JSON.parse(Buffer.from(body, 'base64').toString())
+        const client = new aws.sdk.DynamoDB.DocumentClient()
+        // TODO: Use some kind of pub sub (SNS) to move processing out of this function
+        for (let event of payload) {
+          const { message_event, track_event } = event.msys
+          try {
+            if (message_event) {
+              console.log(
+                `${strBatchId} INSERT message_event: ${message_event.type}`
+              )
+              await client
+                .put({
+                  TableName: events.name.get(),
+                  Item: message_event
+                })
+                .promise()
+            }
+            if (track_event) {
+              console.log(
+                `${strBatchId} INSERT track_event: ${track_event.type}`
+              )
+              await client
+                .put({
+                  TableName: events.name.get(),
+                  Item: track_event
+                })
+                .promise()
+            }
+          } catch (err) {
+            console.log(
+              `${strBatchId} INSERT error: ${JSON.stringify(err.stack)}`
+            )
+            return {
+              statusCode: 500,
+              body: ''
+            }
+          }
+        }
+        return {
+          statusCode: 200,
+          body: ''
+        }
+      }
     }
-  }
-  res.status(200).end()
+  ]
 })
 
-export const url = webhookHandler.publish().url
+export const url = webhookHandler.url
 
 // Creates the SparkPost Webhook
 const webhook = new SparkPostWebhookResource('sparkpost-webhook', {
