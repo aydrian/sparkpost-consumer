@@ -1,6 +1,6 @@
 import * as awsx from '@pulumi/awsx'
 import * as aws from '@pulumi/aws'
-import { SparkPostWebhookResource } from './sparkpost'
+import { SparkPostWebhookResource } from '@aydrian/pulumi-sparkpost'
 
 // Create a table `events` with `event_id` as primary key
 const events = new aws.dynamodb.Table('sparkpost-events', {
@@ -49,7 +49,7 @@ const webhookHandler = new awsx.apigateway.API('sparkpost-webhook-handler', {
           console.log(`GET /events error: ${err.stack}`)
           return {
             statusCode: 500,
-            body: err.stack
+            body: 'An error occurred, please check the Pulumi Logs'
           }
         }
       }
@@ -63,7 +63,7 @@ const webhookHandler = new awsx.apigateway.API('sparkpost-webhook-handler', {
           event.headers['X-MessageSystems-Batch-ID']
         }`
         console.log(`${strBatchId} ACK`)
-        const body = event.body || '[]'
+        const body = event.body || ''
         const payload = JSON.parse(Buffer.from(body, 'base64').toString())
         const client = new aws.sdk.DynamoDB.DocumentClient()
         // TODO: Use some kind of pub sub (SNS) to move processing out of this function
@@ -98,7 +98,7 @@ const webhookHandler = new awsx.apigateway.API('sparkpost-webhook-handler', {
             )
             return {
               statusCode: 500,
-              body: ''
+              body: 'An error occurred, please check the Pulumi Logs'
             }
           }
         }

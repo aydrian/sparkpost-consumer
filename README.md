@@ -17,7 +17,6 @@ with `***`.
 
 1. Set Cloud Provider config values
    ```
-   $ pulumi config set cloud:provider aws
    $ pulumi config set aws:region us-east-1
    ```
 1. Add your [SparkPost API Key](https://support.sparkpost.com/customer/portal/articles/1933377-create-api-keys). It must have `Event Webhook: Read/Write` permissions. It is recommended that it has no other permissions.
